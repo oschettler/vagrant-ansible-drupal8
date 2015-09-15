@@ -24,6 +24,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Configure virtual machine options.
   config.vm.box = "ubuntu/trusty64"
+  #config.vm.box = "debian/jessie64"
   config.vm.hostname = boxname
 
   config.vm.network :private_network, ip: boxipaddress
@@ -51,20 +52,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # SSH Set up.
   config.ssh.forward_agent = true
 
-  # Run an Ansible playbook on setting the box up
-  if !File.exist?(provision_hosts_file)
-    config.trigger.before :up, :stdout => true, :force => true do
-      run 'ansible-playbook -i ' + boxipaddress + ', --ask-sudo-pass ' + vagrant_dir + '/provision/playbooks/local_up.yml --extra-vars "local_ip_address=' + boxipaddress + '"'
-    end
-  end
-
-  # Run the halt/destroy playbook upon halting or destroying the box
-  if File.exist?(provision_hosts_file)
-    config.trigger.before [:halt, :destroy], :stdout => true, :force => true do
-      run 'ansible-playbook -i ' + boxipaddress + ', --ask-sudo-pass ' + vagrant_dir + '/provision/playbooks/local_halt_destroy.yml'
-    end
-  end
-
   # Provision vagrant box with Ansible.
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = vagrant_dir + "/provision/playbooks/setup.yml"
@@ -86,9 +73,14 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       :nfs => nfs_setting
   end
 
-  # Create all virtual hosts
-  config.trigger.after [:up, :reload], :stdout => true, :force => true do
-    run 'ansible-playbook -i ' + boxipaddress + ', -K --user=vagrant --private-key=~/.vagrant.d/insecure_private_key ' + vagrant_dir + '/provision/playbooks/virtual_hosts.yml --extra-vars "local_ip_address=' + boxipaddress + '"'
+  # Provision vagrant box with Ansible.
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = vagrant_dir + "/provision/playbooks/virtual_hosts.yml"
+    ansible.host_key_checking = false
+    ansible.extra_vars = {user:"vagrant"}
+    if vconfig['ansible_verbosity'] != ''
+      ansible.verbose = vconfig['ansible_verbosity']
+    end
   end
 
 end

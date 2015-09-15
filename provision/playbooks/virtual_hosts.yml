@@ -26,16 +26,6 @@
         - restart nginx
         - restart fpm
 
-    - name: local actions | add reference of host to local hosts file
-      lineinfile:
-        dest='{{ hosts_file_location }}'
-        state=present
-        line='{{ local_ip_address }} {{ item["alias"] }} www.{{ item["alias"] }}'
-      delegate_to: 127.0.0.1
-      with_items:
-        - "{{ vhosts }}"
-      sudo: true
-
     - name: MySQL | create applications databases
       mysql_db: name={{ item["db"] }} state=present login_password={{ mysql_root_password }} login_user=root collation={{ mysql_collation_server }}
       tags: mysql
